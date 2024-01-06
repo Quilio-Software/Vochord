@@ -1,4 +1,4 @@
-* How it works:
+How it works:
 
 avail_1 = [3,5,4,6,2,7]
 avail_2 = [3,5,6,2,4,7]
@@ -15,13 +15,19 @@ mode2[] = rotate(mode1[],-1)l
 mode7[] = rotate(mode6[],-1)
 
 //user input - hits first pad
-rootIndex = getIndex(userInputMidiNo,scale[])
-
-//send note
-sendNote(activeMode[],rootIndex)
-activeIndex = rootIndex
+activeIndex = getIndex(userInputMidiNo,scale[])
+sendNote(activeMode[],activeIndex)
 activeMode = mode(activeIndex)
 
 //assign notes to nearby pads based on avail sequence
 mapSequence(activeMode[],avail_1[])
 
+//user input - adds second pad to create dyad
+activeIndex = getIndex(userInputMidiNo,scale[])
+sendNote(activeMode[],activeIndex)
+
+//avail_2 has activeIndex removed from it
+removeNote(avail_2,activeIndex)
+
+//assign notes to nearby pads based on avail sequence
+mapSequence(activeMode[],avail_2[])
