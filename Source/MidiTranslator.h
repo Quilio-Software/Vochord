@@ -45,6 +45,8 @@ public:
     Chord translatedChord;
     
     MidiNoteTracker noteTracker;  // MidiNoteTracker instance
+    
+    int noteIndex = 0;
 
     int startingMidiNote;
     int rootNote = 60;
@@ -98,7 +100,7 @@ public:
     
     int getXFromMidi (int note)
     {
-        return (note - ((note - 44) / 8));
+        return ((note - 44) % 8);
     }
     
     int getYFromMidi (int note)
@@ -113,12 +115,12 @@ public:
         return sqrt(dx * dx + dy * dy);
     }
     
-    int noteIndex = 0;
+    int firstNote = 0;
     void process (juce::MidiBuffer& midiMessages)
     {
         static std::set<int> activeNotes; // Tracks active notes
         static std::map<int, int> noteMap; // Maps original notes to translated notes
-        juce::MidiBuffer::Iterator midiBufferIterator(midiMessages);
+        juce::MidiBuffer::Iterator midiBufferIterator (midiMessages);
         juce::MidiMessage message;
         int sampleNumber;
 
@@ -151,12 +153,13 @@ public:
                 int translatedNote;
                 
                 // Calculate the offset from the first pressed note
-                int firstNote = *activeNotes.begin();
+                DBG ("XY: " + juce::String (getXFromMidi (note)) + juce::String ("|") + juce::String (getYFromMidi (note)));
                 int offset = calculateDistance (getXFromMidi (note), getYFromMidi(note), getXFromMidi (firstNote), getYFromMidi(firstNote) );//note - firstNote;
                 
                 if (noteIndex == 0)
                 {
                     indexRoot = available1;
+                    firstNote = note;
                 }
                 else if (noteIndex == 1)
                 {
@@ -171,14 +174,16 @@ public:
                     indexRoot = available4;
                 }
                 
-                translatedNote = rootNote + getChordNoteIntervalOffset (offset, noteIndex); // Apply the offset to MIDI note 60
+                auto chordIntervalOffset = getChordNoteIntervalOffset (offset);
+                DBG ("Chord interval offset: " + juce::String (chordIntervalOffset));
+                translatedNote = rootNote + chordIntervalOffset; // Apply the offset to MIDI note 60
                 
                 if (noteIndex == 0)
                     translatedNote = rootNote;
                 else
                 {
                     //noteIndex handles rotation amount, offset is the active index
-                    mode.erase (std::remove (mode.begin(), mode.end(), getModeOffset (offset, noteIndex)), mode.end());
+                    indexRoot.erase (std::remove (indexRoot.begin(), indexRoot.end(), getModeOffset (offset, noteIndex)), indexRoot.end());
                 }
                 
                 noteIndex++;
