@@ -17,17 +17,17 @@ class MidiNoteTracker : public juce::MidiInputCallback
 public:
     MidiNoteTracker() {}
 
-    void handleIncomingMidiMessage(juce::MidiInput* source, const juce::MidiMessage& message) override
+    void handleIncomingMidiMessage (juce::MidiInput* source, const juce::MidiMessage& message) override
     {
         if (message.isNoteOn())
         {
             int note = message.getNoteNumber();
-            pressedNotes.insert(note); // Add the pressed note
+            pressedNotes.insert (note); // Add the pressed note
         }
         else if (message.isNoteOff())
         {
             int note = message.getNoteNumber();
-            pressedNotes.erase(note); // Remove the released note
+            pressedNotes.erase (note); // Remove the released note
         }
     }
 
@@ -70,8 +70,8 @@ public:
     std::vector<int> available3 {0, 3, 5, 2, 4, 6, 7};
     std::vector<int> available4 {0, 3, 5, 2, 6, 7, 4};
     
-    std::vector<int> mode {0, 2, 4, 5, 7, 10, 12};
-    std::vector<int> OGMode {0, 2, 4, 5, 7, 10, 12};
+    std::vector<int> mode {0, 2, 4, 5, 7, 9, 11};
+    std::vector<int> OGMode {0, 2, 4, 5, 7, 9, 11};
 
     
     //Yay, the mode is rotating
@@ -108,7 +108,7 @@ public:
     
     int getYFromMidi (int note)
     {
-        return ((note-44) / 8);
+        return ((note - 44) / 8);
     }
     
     double calculateDistance (int x1, int y1, int x2, int y2)
@@ -119,6 +119,8 @@ public:
     }
     
     int firstNote = 0;
+    int lastPressedMidiNote = 0;
+    int previousNote = 0;
     void process (juce::MidiBuffer& midiMessages)
     {
         static std::set<int> activeNotes; // Tracks active notes
@@ -130,8 +132,7 @@ public:
         while (midiBufferIterator.getNextEvent (message, sampleNumber))
         {
             noteTracker.handleIncomingMidiMessage (nullptr, message); // Track notes
-            
-     //       DBG ("Pressing physical note: " + juce::String (message.getNoteNumber()));
+            int currentNote = message.getNoteNumber();
         }
 
         const auto& pressedNotes = noteTracker.getPressedNotes();
@@ -150,15 +151,20 @@ public:
       //          return;
             }
             
-
             if (activeNotes.find (note) == activeNotes.end()) // Note is new
             {
+                // Check for new note-on event
+
+                if (previousNote == -1)
+                    previousNote = note;
+                
                 int translatedNote;
                 
                 // Calculate the offset from the first pressed note
       //          DBG ("XY: " + juce::String (getXFromMidi (note)) + juce::String ("|") + juce::String (getYFromMidi (note)));
-                int offset = calculateDistance (getXFromMidi (note), getYFromMidi(note), getXFromMidi (firstNote), getYFromMidi(firstNote));//note - firstNote;
-                
+                int offset = calculateDistance (getXFromMidi (previousNote), getYFromMidi (previousNote), getXFromMidi (note), getYFromMidi (note));//note - firstNote;
+                DBG ("last pressed midi note is: " + juce::String (previousNote));
+                DBG ("currently pressed midi note is: " + juce::String (note));
                 if (noteIndex == 0)
                 {
                     available1 = {0, 3, 5, 4, 6, 2, 7};
@@ -168,33 +174,16 @@ public:
                     
                     indexRoot = available1;
                     firstNote = note;
-                    
-                    offset = 0;
                 }
+                
+                previousNote = note;
 
-                DBG ("Square OFFSET IS " + juce::String (offset));
-                int index = indexRoot[offset]; //we get the index in the active mode
-                DBG ("INDEX OF mode note IS " + juce::String (index));
-                
-                //    std::vector<int> mode {0, 2, 4, 5, 7, 10, 12};
-                DBG ("rotated index: " + juce::String (std::max (index - 1, 0)));
-                auto chordIntervalOffset = mode [std::max (index - 1, 0)];
-                DBG ("Chord interval offset: " + juce::String (chordIntervalOffset));
-                translatedNote = rootNote + chordIntervalOffset; // Apply the offset to MIDI note 60
-                
                 if (noteIndex == 0)
                 {
+                    DBG ("==");
                     translatedNote = rootNote;
                 }
-                else
-                {
-//                    available1.erase (std::remove (available1.begin(), available1.end(), index), available1.end());
-//                    available2.erase (std::remove (available2.begin(), available2.end(), index), available2.end());
-//                    available3.erase (std::remove (available3.begin(), available3.end(), index), available3.end());
-//                    available4.erase (std::remove (available4.begin(), available4.end(), index), available4.end());
-                }
-                
-                if (noteIndex == 1)
+                else if (noteIndex == 1)
                 {
                     indexRoot = available2;
                 }
@@ -206,12 +195,31 @@ public:
                 {
                     indexRoot = available4;
                 }
-                
-                
-                for (int i = 0; i < 7; i++)
+                else
                 {
-                    juce::Logger::writeToLog (juce::String (indexRoot[i]) + juce::String (" "));
+
                 }
+                
+
+                DBG ("Square OFFSET IS " + juce::String (offset));
+                int index = indexRoot[offset]; //we get the index in the active mode
+                DBG ("INDEX OF mode note IS " + juce::String (index));
+                
+                if (noteIndex != 0)
+                {
+                    available1.erase (std::remove (available1.begin(), available1.end(), index), available1.end());
+                    available2.erase (std::remove (available2.begin(), available2.end(), index), available2.end());
+                    available3.erase (std::remove (available3.begin(), available3.end(), index), available3.end());
+                    available4.erase (std::remove (available4.begin(), available4.end(), index), available4.end());
+                }
+                
+                
+                //    std::vector<int> mode {0, 2, 4, 5, 7, 10, 12};
+                DBG ("rotated index: " + juce::String (std::max (index - 1, 0)));
+                auto chordIntervalOffset = mode [std::max (index - 1, 0)];
+                DBG ("Chord interval offset: " + juce::String (chordIntervalOffset));
+                translatedNote = rootNote + chordIntervalOffset; // Apply the offset to MIDI note 60
+                
                 
 
                 
@@ -241,6 +249,7 @@ public:
                 noteIndex--;
                 if (noteIndex < 0) noteIndex = 0;
                 
+                previousNote = -1;
 
 
                 noteMap.erase(originalNote); // Remove the mapping
