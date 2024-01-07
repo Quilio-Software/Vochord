@@ -70,7 +70,7 @@ public:
     std::vector<int> available3 {0, 3, 5, 2, 4, 6, 7};
     std::vector<int> available4 {0, 3, 5, 2, 6, 7, 4};
     
-    std::vector<int> mode {0, 2, 4, 5, 7, 9, 11};
+    std::vector<int> mode {0, 2, 4, 5, 7, 9, 11}; //find starting note like 81, go down octaves, find next note, go back up octave
     std::vector<int> OGMode {0, 2, 4, 5, 7, 9, 11};
 
     
@@ -110,6 +110,37 @@ public:
     {
         return ((note - 44) / 8);
     }
+        
+    void rotateModeArray(int rotationalOffset)
+    {
+        std::vector<int> rotatedMode(mode.size());
+        int n = mode.size();
+
+        for (int i = 0; i < n; ++i)
+        {
+            // Ensure the index is positive and within the bounds after subtracting the offset
+            int rotatedIndex = (i - rotationalOffset) % n;
+            if (rotatedIndex < 0) {
+                rotatedIndex += n;
+            }
+
+            rotatedMode[rotatedIndex] = mode[i];
+        }
+
+        mode = rotatedMode;
+    }
+
+
+    
+    void displayArray (std::vector<int> array)
+    {
+        DBG ("Array: ");
+        for (auto& element : array)
+        {
+            DBG (element);
+        }
+    }
+
     
     double calculateDistance (int x1, int y1, int x2, int y2)
     {
@@ -145,10 +176,18 @@ public:
             
             if (note >= 36 && note <= 43)
             {
-                rootNote = 36 + getOGModeOffset (note - 36) + 36;
+                auto ogModeOffset = getOGModeOffset (note - 36);
+                rootNote = 36 + (ogModeOffset) + 36;
+                
+                DBG ("mode offset is: " + juce::String (ogModeOffset));
+                
+                int modeStartIndex = note - 36;
+                mode = OGMode;
+                rotateModeArray (modeStartIndex);
                 midiMessages.clear();
-      //          DBG ("Root note changed to: " + juce::String (note));
-      //          return;
+                displayArray (mode);
+                DBG ("Root note changed to: " + juce::String (rootNote));
+                return;
             }
             
             if (activeNotes.find (note) == activeNotes.end()) // Note is new
@@ -201,6 +240,8 @@ public:
                 }
                 
 
+                
+
                 DBG ("Square OFFSET IS " + juce::String (offset));
                 int index = indexRoot[offset]; //we get the index in the active mode
                 DBG ("INDEX OF mode note IS " + juce::String (index));
@@ -218,21 +259,22 @@ public:
                 DBG ("rotated index: " + juce::String (std::max (index - 1, 0)));
                 auto chordIntervalOffset = mode [std::max (index - 1, 0)];
                 DBG ("Chord interval offset: " + juce::String (chordIntervalOffset));
-                translatedNote = rootNote + chordIntervalOffset; // Apply the offset to MIDI note 60
-                
+                translatedNote = rootNote + chordIntervalOffset - mode[0]; // Apply the offset to MIDI note 60
                 
 
                 
-                noteIndex++;
+
                 
                 
                 DBG ("Playing note: " + juce::String (translatedNote));
 
                 noteMap[note] = translatedNote; // Map original note to translated note
 
-                auto messageOn = juce::MidiMessage::noteOn(1, translatedNote, static_cast<uint8>(100));
+                auto messageOn = juce::MidiMessage::noteOn (1, translatedNote, static_cast<uint8>(100));
                 translatedMessages.addEvent(messageOn, sampleNumber);
                 activeNotes.insert (note);
+                
+                noteIndex++;
             }
         }
 
