@@ -252,6 +252,7 @@ public:
                     available2.erase (std::remove (available2.begin(), available2.end(), index), available2.end());
                     available3.erase (std::remove (available3.begin(), available3.end(), index), available3.end());
                     available4.erase (std::remove (available4.begin(), available4.end(), index), available4.end());
+                    indexRoot.erase (std::remove (indexRoot.begin(), indexRoot.end(), index), indexRoot.end());
                 }
                 
                 
