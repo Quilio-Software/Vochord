@@ -1,35 +1,32 @@
-How it works:
+//Algorithm
 
-// setting the algorithm sequence
-avail_1 = [3, 5, 4, 6, 2, 7]
-avail_2 = [3, 5, 6, 2, 4, 7]
-avail_3 = [3, 5, 2, 4, 6, 7]
-avail_4 = [3, 5, 2, 6, 7, 4]
+// user input (UI) - chooses C major scale
+scale[] = [C, D, E, F, G, A, B]
 
-// user input - chooses scale to create chords within
-scale[] = [0, 2, 4, 5, 7, 10, 12]
-mode1[] = scale[]
-mode2[] = rotate (mode1[], -1)
+// generating the modes based on scale
+mode_1[] = scale[]                // [C, D, E, F, G, A, B]
+mode_2[] = rotate (mode_1[], -1)  // [D, E, F, G, A, B, C]
 . . .
-mode7[] = rotate (mode6[], -1)
+mode_7[] = rotate (mode_6[], -1)  // [B, C, D, E, F, G, A]
 
-//user input - chord starting note
-rootnote = 60
-chordStartScaleIndex = getScaleIndex (chordStartMIDINote) //0, 1, 2, 3, 4, 5, 6
+// user input (keyboard) - sets root note
+rootNote = A
+activeMode = setMode (scale.getIndex (A)) // [A, B, C, D, E, F, G]
 
+// user input (launchpad) - first pad pressed
+sendNote (activeMode[], chordStartScaleIndex) // 'A' sent to virtual instrument
 
-sendNote (activeMode[], chordStartScaleIndex)
-activeMode = mode (chordStartScaleIndex)
+// serially assign notes to concentric pads based on sequence,
+// which traverses the activeMode to choose which notes to map serially outwards from the most recently pressed pad
+seq_1 = [3, 5, 4, 6, 2, 7]
+seq_2 = [3, 5, 6, 2, 4, 7]
+seq_3 = [3, 5, 2, 4, 6, 7]
+seq_4 = [3, 5, 2, 6, 7, 4]
 
-// assign notes to nearby pads based on avail sequence
-mapSequence (activeMode[], avail_1[])
+mapSequence (activeMode[], seq[])
+// [A, B, C, D, E, F, G] <- [3, 5, 4, 6, 2, 7]
+// map => C, E, D, F, B, G
 
-// user input - adds second pad to create dyad
-activeIndex = getIndex (userInputMidiNo, scale[])
-sendNote (activeMode[], chordStartScaleIndex)
+// user input (launchpad) - additional pads pressed to add more notes to chord
 
-// avail_2 has activeIndex removed from it
-removeNote (avail_2, chordStartScaleIndex)
-
-// assign notes to nearby pads based on avail sequence
-mapSequence (activeMode[], avail_2[])
+// user saves chord in piano roll (or memorizes it if they're brave enough)
